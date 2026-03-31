@@ -1,7 +1,7 @@
 <html lang="en" vid="0"><head vid="1">
     <meta charset="UTF-8" vid="2">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" vid="3">
-    <title vid="4">Etolie Matrix|Toolkit for Ordered Life</title>
+    <title vid="4">Ume Matrix | Cloud Edition</title>
     <script src="https://cdn.tailwindcss.com/3.4.17" vid="5"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;family=Playfair+Display:ital,wght@1,500;1,600&amp;display=swap" rel="stylesheet" vid="6">
     <style vid="7">
@@ -357,30 +357,15 @@
         let currentFilter = 'All';
         let activeEditKey = null;
 
+        // 已清除预填数据
         let defaultDb = {
-            baseBudget: 32000,
-            targetSaving: 10000,
-            octopusBal: 425.50,
-            records: [
-                { name: 'Sushi Express', valHKD: 180.0, category: 'Meal', viaOcto: true, fullDate: `${new Date().getMonth()+1}.${new Date().getDate()}` },
-                { name: 'MTR Central', valHKD: 12.5, category: 'Transport', viaOcto: true, fullDate: `${new Date().getMonth()+1}.${new Date().getDate()}` },
-                { name: 'Uniqlo Basics', valHKD: 450.0, category: 'Shopping', viaOcto: false, fullDate: `${new Date().getMonth()+1}.${new Date().getDate()}` },
-                { name: 'Monthly Salary', valHKD: 32000.0, category: 'Income', viaOcto: false, fullDate: '10.01' }
-            ],
-            dueDates: [
-                { id: 1, type: 'Flight', name: 'ANA Tokyo', amount: 4500, date: '11.15', memo: 'HND' },
-                { id: 2, type: 'Event', name: 'Concert Tix', amount: 1200, date: '11.20', memo: 'VIP' }
-            ],
-            checklist: [
-                { name: '✦ Tokyo Autumn | Flight', done: true },
-                { name: '✦ Tokyo Autumn | Hotel 1', done: true },
-                { name: '✦ Tokyo Autumn | Hotel 2', done: false },
-                { name: '✦ Tokyo Autumn | JR Pass', done: false }
-            ],
-            wishlist: [
-                { name: 'Sony A7IV Lens', target: 8000, saved: 0 },
-                { name: 'New iPad Mini', target: 4500, saved: 0 }
-            ]
+            baseBudget: 0,
+            targetSaving: 0,
+            octopusBal: 0,
+            records: [],
+            dueDates: [],
+            checklist: [],
+            wishlist: []
         };
 
         let db = { ...defaultDb };
@@ -639,15 +624,10 @@
                 return;
             }
             
-            // 1. 固定生成 Ticket
             db.checklist.push({ name: `✦ ${name} | Ticket`, done: false });
-            
-            // 2. 根据勾选生成 Event
             if(hasEvent) {
                 db.checklist.push({ name: `✦ ${name} | Event`, done: false });
             }
-            
-            // 3. 根据次数循环生成 Flight 和 Hotel
             for(let i = 1; i <= count; i++) {
                 const suffix = count > 1 ? ` #${i}` : '';
                 db.checklist.push({ name: `✦ ${name} | Flight${suffix}`, done: false });
