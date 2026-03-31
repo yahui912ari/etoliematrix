@@ -1,361 +1,737 @@
-<html lang="en"><head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Ume Matrix | Cloud Edition</title>
-    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Playfair+Display:ital,wght@1,500;1,600&display=swap" rel="stylesheet">
-    
-    <style>
-        body { -webkit-tap-highlight-color: transparent; background-color: #f8fbf8; font-family: 'Inter', sans-serif; color: #474a4d; overflow-x: hidden; width: 100%; height: auto; }
-        .font-matrix-title { font-family: 'Playfair Display', serif; font-weight: 600; font-style: italic; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .glass-panel { background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.6); }
-        .glass-card { background: linear-gradient(145deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 100%); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.7); box-shadow: 0 8px 32px rgba(71, 74, 77, 0.05); }
-        .glass-input { background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(255, 255, 255, 0.8); transition: all 0.2s ease; color: #474a4d; width: 100%; }
-        .glass-input:focus { outline: none; border-color: #a8c97f; background: rgba(255, 255, 255, 0.8); }
-        .responsive-flex { display: flex; flex-wrap: wrap; gap: 8px; }
-        .btn-active:active { transform: scale(0.96); }
-        .ticker-container { mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent); -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent); }
-        @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-        .animate-ticker { animation: ticker 60s linear infinite; }
-        .modal-overlay { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; position: fixed; inset: 0; z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
-        .modal-overlay.active { opacity: 1; pointer-events: auto; display: flex; }
-    </style>
-</head>
-
-<body class="relative">
-    <div class="w-full flex flex-col">
-        <header class="pt-12 pb-4 px-6 relative">
-            <div class="flex justify-between items-start mb-6">
-                <div>
-                    <h1 class="text-4xl font-matrix-title text-[#474a4d] leading-none mb-1">Matrix<span class="text-[#a8c97f]">.</span></h1>
-                </div>
-                <div class="flex flex-col items-end gap-1">
-                    <button id="fx-display" class="px-3 py-1.5 rounded-full glass-panel text-[10px] font-mono font-semibold text-[#474a4d] btn-active" onclick="updateFX()">Syncing FX...</button>
-                    <span id="sync-status" class="text-[8px] font-bold text-[#a8c97f] uppercase tracking-widest opacity-0 transition-opacity">Cloud Synced</span>
-                </div>
-            </div>
-
-            <div class="glass-card rounded-[32px] p-6 mb-4">
-                <div class="flex gap-4 mb-5">
-                    <div class="flex-1 flex flex-col cursor-pointer border-r border-[#474a4d]/5" onclick="openEditModal('baseBudget', 'Total Assets')">
-                        <span class="text-[9px] text-[#474a4d]/60 uppercase font-bold tracking-wider mb-1">Total (HKD)</span>
-                        <div class="text-2xl font-mono font-bold text-[#474a4d] tracking-tight break-all" id="stat-assets">0.00</div>
-                    </div>
-                    <div class="flex-1 flex flex-col cursor-pointer pl-2" onclick="openEditModal('octopusBal', 'Octopus Initial')">
-                        <span class="text-[9px] text-[#474a4d]/60 uppercase font-bold tracking-wider mb-1">Octopus</span>
-                        <div class="text-2xl font-mono font-bold text-[#e6cde3] tracking-tight break-all" id="stat-octo">0.00</div>
-                    </div>
-                </div>
-                
-                <div class="flex items-center justify-between border-t border-white/60 pt-4 text-center gap-1">
-                    <div class="flex-1 cursor-pointer" onclick="openEditModal('targetSaving', 'Target Saving')">
-                        <div class="text-[9px] text-[#474a4d]/60 uppercase font-bold tracking-wider mb-1">Target</div>
-                        <div class="text-base font-mono font-bold text-[#a8c97f]" id="stat-save">0</div>
-                    </div>
-                    <div class="w-px h-6 bg-[#474a4d]/10"></div>
-                    <div class="flex-1">
-                        <div class="text-[9px] text-[#474a4d]/60 uppercase font-bold tracking-wider mb-1">Daily Rec</div>
-                        <div class="text-base font-mono font-bold text-[#e6cde3]" id="stat-daily">0</div>
-                    </div>
-                    <div class="w-px h-6 bg-[#474a4d]/10"></div>
-                    <div class="flex-1">
-                        <div class="text-[9px] text-[#474a4d]/60 uppercase font-bold tracking-wider mb-1">Cycle Left</div>
-                        <div class="text-base font-mono font-bold text-[#474a4d]" id="stat-days">0D</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="w-full h-10 rounded-full shadow-lg bg-white/80 backdrop-blur-xl border border-white flex items-center overflow-hidden relative">
-                <div class="absolute left-1 z-10 bg-white shadow-sm px-3 py-1 rounded-full text-[8px] font-bold tracking-widest text-[#474a4d] flex items-center gap-1.5">
-                    <div class="w-1 h-1 rounded-full bg-[#a8c97f] animate-pulse"></div>TICKER
-                </div>
-                <div class="ticker-container w-full h-full flex items-center ml-20">
-                    <div id="main-ticker" class="flex whitespace-nowrap animate-ticker text-[10px] font-mono font-bold text-[#474a4d]/80 uppercase"></div>
-                </div>
-            </div>
-        </header>
-
-        <main class="px-6 pt-4 pb-64 space-y-10">
-            <section>
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xs font-bold text-[#474a4d] tracking-widest uppercase">✦ Audit Stream</h2>
-                    <div id="audit-summary" class="px-3 py-1 bg-white/60 backdrop-blur-sm rounded-full font-mono font-bold text-[9px] text-[#474a4d] border border-white">NET: 0</div>
-                </div>
-                <div class="flex gap-2 overflow-x-auto no-scrollbar mb-4 pb-1" id="audit-filters"></div>
-                <div class="glass-card rounded-[24px] overflow-hidden" id="log-list"></div>
-            </section>
-
-            <section>
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xs font-bold text-[#474a4d] tracking-widest uppercase">✦ Expedition Checklist</h2>
-                    <button onclick="toggleModal('checklist-modal', true)" class="text-[10px] bg-white/60 text-[#474a4d] border border-white px-3 py-1.5 rounded-full font-bold btn-active shadow-sm">Generator</button>
-                </div>
-                <div id="checklist-container" class="space-y-2"></div>
-            </section>
-
-            <section>
-                <h2 class="text-xs font-bold text-[#474a4d] tracking-widest uppercase mb-4">✦ Due Planning</h2>
-                <div class="glass-card rounded-[24px] p-5 mb-4 space-y-3">
-                    <div class="responsive-flex">
-                        <select id="due-type" class="glass-input h-11 rounded-xl px-3 text-xs font-bold uppercase flex-[1_1_80px]">
-                            <option>Ticket</option><option>Hotel</option><option>Flight</option><option>Event</option><option>Goods</option>
-                        </select>
-                        <input type="text" id="due-name" placeholder="Name" class="glass-input flex-[2_1_150px] rounded-xl px-4 text-sm h-11">
-                    </div>
-                    <div class="responsive-flex">
-                        <input type="text" id="due-memo" placeholder="Memo" class="glass-input flex-1 rounded-xl px-4 text-sm h-11">
-                        <input type="text" id="due-date" placeholder="MM.DD" class="glass-input w-24 rounded-xl text-center text-sm font-mono h-11">
-                    </div>
-                    <div class="responsive-flex">
-                        <input type="number" id="due-amt" placeholder="HKD Amount" class="glass-input flex-1 rounded-xl px-4 h-11 text-sm font-mono">
-                        <button onclick="addDue()" class="bg-[#474a4d] text-white rounded-xl px-6 h-11 text-[10px] font-bold uppercase btn-active shadow-md">Plan</button>
-                    </div>
-                </div>
-                <div id="due-list" class="space-y-2"></div>
-            </section>
-
-            <section class="pb-10">
-                <h2 class="text-xs font-bold text-[#474a4d] tracking-widest uppercase mb-4">✦ Wishlist</h2>
-                <div id="wish-container" class="space-y-3"></div>
-                <button onclick="toggleModal('wish-modal', true)" class="w-full mt-3 py-3 rounded-2xl border border-dashed border-[#474a4d]/30 text-[10px] font-bold text-[#474a4d]/60 uppercase btn-active">New Wish</button>
-            </section>
-        </main>
-    </div>
-
-    <div class="fixed bottom-0 left-0 right-0 p-4 z-40 pb-10 pointer-events-none">
-        <div class="rounded-[30px] p-4 shadow-2xl pointer-events-auto bg-white/90 backdrop-blur-xl border border-white max-w-md mx-auto">
-            <div class="flex flex-wrap justify-between items-center gap-3 mb-3 px-1">
-                <label class="inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="via-octo" class="sr-only peer">
-                    <div class="w-8 h-4 bg-[#e6cde3] rounded-full peer-checked:bg-[#a8c97f] transition-colors border border-white"></div>
-                    <span class="ml-2 text-[9px] font-bold text-[#474a4d] uppercase">Octopus</span>
-                </label>
-                <div class="flex gap-2">
-                    <select id="in-cur" class="bg-white/60 border border-white rounded-lg px-2 py-1.5 text-[10px] font-bold text-[#474a4d]"><option>HKD</option><option>JPY</option><option>CNY</option></select>
-                    <select id="in-cat" class="bg-white/60 border border-white rounded-lg px-2 py-1.5 text-[10px] font-bold text-[#474a4d]">
-                        <option value="Meal">Meal</option><option value="Transport">Transport</option><option value="Shopping">Shopping</option>
-                        <option value="Takarazuka">Takarazuka</option><option value="TopUp">TopUp</option><option value="Transfer">Transfer</option>
-                        <option value="Income">Income</option><option value="Exclude">Exclude</option>
-                    </select>
-                </div>
-            </div>
-            <div class="responsive-flex">
-                <input type="text" id="in-name" placeholder="Detail" class="glass-input flex-[2_1_120px] rounded-xl px-4 text-sm h-12">
-                <input type="number" id="in-val" placeholder="0.00" class="glass-input flex-[1_1_70px] rounded-xl px-3 text-sm font-mono h-12 text-right">
-                <button onclick="commitTransaction()" class="bg-[#e6cde3] text-[#474a4d] rounded-xl px-4 h-12 text-[10px] font-bold uppercase btn-active shadow-sm border border-white">Submit</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="checklist-modal" class="modal-overlay">
-        <div class="absolute inset-0 bg-[#474a4d]/20 backdrop-blur-sm" onclick="toggleModal('checklist-modal', false)"></div>
-        <div class="glass-card rounded-[32px] p-8 w-full max-w-sm relative z-10 shadow-2xl">
-            <h3 class="text-sm font-bold text-[#474a4d] uppercase mb-6 text-center">Expedition Generator</h3>
-            <input type="text" id="tour-name" placeholder="Tour Name" class="glass-input rounded-2xl px-4 py-3.5 text-sm mb-4">
-            <div class="space-y-4 mb-6 px-1">
-                <div class="flex justify-between items-center text-xs font-bold text-[#474a4d] uppercase">
-                    <span>Hotel/Flight Count</span>
-                    <input type="number" id="tour-count" value="1" class="glass-input w-20 rounded-xl py-2 text-center font-mono">
-                </div>
-                <div class="flex justify-between items-center text-xs font-bold text-[#474a4d] uppercase">
-                    <span>Include Event?</span>
-                    <input type="checkbox" id="tour-event" class="w-5 h-5 accent-[#a8c97f]">
-                </div>
-            </div>
-            <button onclick="generateTour()" class="w-full py-4 rounded-2xl text-xs font-bold text-white bg-[#a8c97f] btn-active">Generate</button>
-        </div>
-    </div>
-
-    <div id="wish-modal" class="modal-overlay">
-        <div class="absolute inset-0 bg-[#474a4d]/20 backdrop-blur-sm" onclick="toggleModal('wish-modal', false)"></div>
-        <div class="glass-card rounded-[32px] p-8 w-full max-w-sm relative z-10 shadow-2xl">
-            <h3 class="text-sm font-bold text-[#474a4d] uppercase mb-6 text-center">New Wish</h3>
-            <input type="text" id="final-wish-name" placeholder="Item Name" class="glass-input rounded-2xl px-4 py-3.5 text-sm mb-4">
-            <input type="number" id="final-wish-target" placeholder="Price (HKD)" class="glass-input rounded-2xl px-4 py-3.5 text-sm font-mono mb-6">
-            <button onclick="addWishFinal()" class="w-full py-4 rounded-2xl text-xs font-bold text-white bg-[#a8c97f] btn-active">Confirm Add</button>
-        </div>
-    </div>
-
-    <div id="edit-modal" class="modal-overlay">
-        <div class="absolute inset-0 bg-[#474a4d]/20 backdrop-blur-sm" onclick="toggleModal('edit-modal', false)"></div>
-        <div class="glass-card rounded-[32px] p-8 w-full max-w-sm relative z-10 text-center shadow-2xl">
-            <h3 id="modal-title" class="text-xs font-bold uppercase mb-6 text-[#474a4d]">Update</h3>
-            <input type="number" id="modal-input" class="glass-input rounded-2xl py-4 text-2xl font-mono font-bold text-center mb-6">
-            <div class="flex gap-3">
-                <button onclick="toggleModal('edit-modal', false)" class="flex-1 py-3 rounded-2xl text-xs font-bold text-[#474a4d] bg-white/60 border border-white btn-active">Cancel</button>
-                <button onclick="saveEditModal()" class="flex-1 py-3 rounded-2xl text-xs font-bold text-white bg-[#a8c97f] btn-active">Save</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const CLOUD_CONF = { masterKey: '$2a$10$Yxf3kPbtKxa8np3kNU2h3eI0kNfWiCRJ1Kiv2TNeyw2PumD7e.TY6', binId: '69cbc9d4856a682189e7120f' };
-        const STORAGE_KEY = 'ume_matrix_v11_cloud';
-        let FX = { HKD: 1.0, JPY: 0.052, CNY: 1.10 };
-        let currentFilter = 'All', activeEditKey = null;
-        let db = { records: [], dueDates: [], checklist: [], wishlist: [], baseBudget: 25000, targetSaving: 5000, octopusBal: 1000 };
-
-        async function loadFromCloud() {
-            try {
-                const res = await fetch(`https://api.jsonbin.io/v3/b/${CLOUD_CONF.binId}/latest`, { headers: { 'X-Master-Key': CLOUD_CONF.masterKey } });
-                const data = await res.json();
-                if (data.record && data.record.records) { db = data.record; localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); }
-            } catch (e) { const local = localStorage.getItem(STORAGE_KEY); if (local) db = JSON.parse(local); }
-            refresh();
+<html lang="en" vid="0"><head vid="1">
+    <meta charset="UTF-8" vid="2">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" vid="3">
+    <title vid="4">Ume Matrix | Cloud Edition</title>
+    <script src="https://cdn.tailwindcss.com/3.4.17" vid="5"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;family=Playfair+Display:ital,wght@1,500;1,600&amp;display=swap" rel="stylesheet" vid="6">
+    <style vid="7">
+        :root {
+            --color-text: #1a2744;
+            --color-green: #00b8a9;
+            --color-lavender: #ccccff;
+            --color-bg: #ffffff;
+        }
+        body {
+            -webkit-tap-highlight-color: transparent;
+            background-color: var(--color-bg);
+            font-family: 'Inter', sans-serif;
+            color: var(--color-text);
+            overflow-x: hidden;
+            width: 100%;
+            min-height: 100vh;
+        }
+        .font-matrix-title {
+            font-family: 'Playfair Display', serif;
+            font-weight: 600;
+            font-style: italic;
+        }
+        .font-mono-custom {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+        }
+        .glass-card {
+            background: linear-gradient(145deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 100%);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            box-shadow: 0 8px 32px rgba(26, 39, 68, 0.05);
+        }
+        .glass-input {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            transition: all 0.2s ease;
+            color: var(--color-text);
+            width: 100%;
+            outline: none;
+        }
+        .glass-input:focus {
+            border-color: var(--color-green);
+            background: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 0 0 2px rgba(0, 184, 169, 0.2);
+        }
+        .glass-input::placeholder {
+            color: rgba(26, 39, 68, 0.4);
         }
 
-        async function save() {
+        .btn-active:active {
+            transform: scale(0.96);
+        }
+        .btn-active {
+            transition: transform 0.1s ease, background-color 0.2s ease;
+        }
+
+        .ticker-mask {
+            mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+            -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+        }
+        @keyframes ticker {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        .animate-ticker {
+            animation: ticker 60s linear infinite;
+        }
+
+        .modal-overlay {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(26, 39, 68, 0.2);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            transform: translateY(20px);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="w-full flex flex-col relative pb-40" vid="8">
+
+    <header class="pt-12 pb-4 px-6 relative z-10" vid="9">
+        <div class="flex justify-between items-start mb-6" vid="10">
+            <div vid="11">
+                <h1 class="text-4xl font-matrix-title text-[#1a2744] leading-none mb-1" vid="12">Matrix<span class="text-[#00b8a9]" vid="13">.</span></h1>
+            </div>
+            <div class="flex flex-col items-end gap-1" vid="14">
+                <button id="fx-display" class="px-3 py-1.5 rounded-full glass-panel text-[10px] font-mono-custom font-semibold text-[#1a2744] btn-active shadow-sm" onclick="updateFX()" vid="15">
+                    Syncing FX...
+                </button>
+                <span id="sync-status" class="text-[8px] font-bold text-[#00b8a9] uppercase tracking-widest opacity-0 transition-opacity duration-300" vid="16">
+                    Cloud Synced
+                </span>
+            </div>
+        </div>
+
+        <div class="glass-card rounded-[32px] p-6 mb-5 relative overflow-hidden" vid="17">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-white/40 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" vid="18"></div>
+            <div class="flex gap-4 mb-6 relative z-10" vid="19">
+                <div class="flex-1 flex flex-col cursor-pointer border-r border-[#1a2744]/10 pr-2 group" onclick="openEditModal('baseBudget', 'Total Assets')" vid="20">
+                    <span class="text-[9px] text-[#1a2744]/60 uppercase font-bold tracking-wider mb-1 group-hover:text-[#1a2744] transition-colors" vid="21">Total (HKD)</span>
+                    <div class="text-2xl font-mono-custom font-bold text-[#1a2744] tracking-tight break-all" id="stat-assets" vid="22">0.00</div>
+                </div>
+                <div class="flex-1 flex flex-col cursor-pointer pl-2 group" onclick="openEditModal('octopusBal', 'Octopus Initial')" vid="23">
+                    <span class="text-[9px] text-[#1a2744]/60 uppercase font-bold tracking-wider mb-1 group-hover:text-[#1a2744] transition-colors" vid="24">Octopus</span>
+                    <div class="text-2xl font-mono-custom font-bold text-[#ccccff] tracking-tight break-all drop-shadow-sm" id="stat-octo" vid="25">0.00</div>
+                </div>
+            </div>
+            <div class="flex items-center justify-between border-t border-white/60 pt-4 text-center gap-2 relative z-10" vid="26">
+                <div class="flex-1 cursor-pointer group" onclick="openEditModal('targetSaving', 'Target Saving')" vid="27">
+                    <div class="text-[9px] text-[#1a2744]/60 uppercase font-bold tracking-wider mb-1 group-hover:text-[#1a2744] transition-colors" vid="28">Target</div>
+                    <div class="text-base font-mono-custom font-bold text-[#00b8a9]" id="stat-save" vid="29">0</div>
+                </div>
+                <div class="w-px h-6 bg-[#1a2744]/10 rounded-full" vid="30"></div>
+                <div class="flex-1" vid="31">
+                    <div class="text-[9px] text-[#1a2744]/60 uppercase font-bold tracking-wider mb-1" vid="32">Daily Rec</div>
+                    <div class="text-base font-mono-custom font-bold text-[#ccccff]" id="stat-daily" vid="33">0</div>
+                </div>
+                <div class="w-px h-6 bg-[#1a2744]/10 rounded-full" vid="34"></div>
+                <div class="flex-1" vid="35">
+                    <div class="text-[9px] text-[#1a2744]/60 uppercase font-bold tracking-wider mb-1" vid="36">Cycle Left</div>
+                    <div class="text-base font-mono-custom font-bold text-[#1a2744]" id="stat-days" vid="37">0D</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="w-full h-10 rounded-full shadow-sm bg-white/60 backdrop-blur-xl border border-white flex items-center overflow-hidden relative" vid="38">
+            <div class="absolute left-1 z-10 bg-white shadow-sm px-3 py-1.5 rounded-full text-[8px] font-bold tracking-widest text-[#1a2744] flex items-center gap-1.5" vid="39">
+                <div class="w-1.5 h-1.5 rounded-full bg-[#00b8a9] animate-pulse" vid="40"></div>
+                TICKER
+            </div>
+            <div class="ticker-mask w-full h-full flex items-center ml-24" vid="41">
+                <div id="main-ticker" class="flex whitespace-nowrap animate-ticker text-[10px] font-mono-custom font-bold text-[#1a2744]/80 uppercase tracking-wide" vid="42"></div>
+            </div>
+        </div>
+    </header>
+
+    <main class="px-6 pt-2 space-y-10 relative z-0" vid="43">
+        <section vid="44">
+            <div class="flex justify-between items-center mb-4" vid="45">
+                <h2 class="text-xs font-bold text-[#1a2744] tracking-widest uppercase flex items-center gap-1.5" vid="46">
+                    <span class="text-[#00b8a9] text-sm" vid="47">✦</span> Audit Stream
+                </h2>
+                <div id="audit-summary" class="px-3 py-1 bg-white/60 backdrop-blur-sm rounded-full font-mono-custom font-bold text-[9px] text-[#1a2744] border border-white shadow-sm" vid="48">
+                    NET: 0
+                </div>
+            </div>
+            <div class="flex gap-2 overflow-x-auto no-scrollbar mb-4 pb-2 snap-x" id="audit-filters" vid="49"></div>
+            <div class="glass-card rounded-[24px] overflow-hidden flex flex-col min-h-[100px]" id="log-list" vid="50"></div>
+        </section>
+
+        <section vid="51">
+            <div class="flex justify-between items-center mb-4" vid="52">
+                <h2 class="text-xs font-bold text-[#1a2744] tracking-widest uppercase flex items-center gap-1.5" vid="53">
+                    <span class="text-[#ccccff] text-sm" vid="54">✦</span> Expedition Checklist
+                </h2>
+                <button onclick="toggleModal('checklist-modal', true)" class="text-[9px] bg-white/80 text-[#1a2744] border border-white px-3 py-1.5 rounded-full font-bold uppercase tracking-wide btn-active shadow-sm hover:bg-white transition-colors" vid="55">
+                    Generator
+                </button>
+            </div>
+            <div id="checklist-container" class="space-y-2.5" vid="56"></div>
+        </section>
+
+        <section vid="57">
+            <h2 class="text-xs font-bold text-[#1a2744] tracking-widest uppercase mb-4 flex items-center gap-1.5" vid="58">
+                <span class="text-[#00b8a9] text-sm" vid="59">✦</span> Due Planning
+            </h2>
+            <div class="glass-card rounded-[24px] p-5 mb-4 space-y-3" vid="60">
+                <div class="flex flex-wrap gap-2" vid="61">
+                    <div class="relative flex-[1_1_80px]" vid="62">
+                        <select id="due-type" class="glass-input h-11 rounded-xl pl-3 pr-8 text-xs font-bold uppercase appearance-none" vid="63">
+                            <option vid="64">Ticket</option>
+                            <option vid="65">Hotel</option>
+                            <option vid="66">Flight</option>
+                            <option vid="67">Event</option>
+                            <option vid="68">Goods</option>
+                        </select>
+                        <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#1a2744]/50 text-xs" vid="69">▼</div>
+                    </div>
+                    <input type="text" id="due-name" placeholder="Name" class="glass-input flex-[2_1_150px] rounded-xl px-4 text-sm h-11 font-medium" vid="70">
+                </div>
+                <div class="flex flex-wrap gap-2" vid="71">
+                    <input type="text" id="due-memo" placeholder="Memo (Optional)" class="glass-input flex-1 rounded-xl px-4 text-sm h-11" vid="72">
+                    <input type="text" id="due-date" placeholder="MM.DD" class="glass-input w-24 rounded-xl text-center text-sm font-mono-custom h-11 placeholder:font-sans" vid="73">
+                </div>
+                <div class="flex flex-wrap gap-2" vid="74">
+                    <div class="relative flex-1" vid="75">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[#1a2744]/40 text-sm font-mono-custom" vid="76">$</span>
+                        <input type="number" id="due-amt" placeholder="Amount" class="glass-input w-full rounded-xl pl-8 pr-4 h-11 text-sm font-mono-custom" vid="77">
+                    </div>
+                    <button onclick="addDue()" class="bg-[#1a2744] text-white rounded-xl px-6 h-11 text-[10px] font-bold uppercase tracking-wider btn-active shadow-md hover:bg-[#11192d] transition-colors" vid="78">
+                        Plan
+                    </button>
+                </div>
+            </div>
+            <div id="due-list" class="space-y-2.5" vid="79"></div>
+        </section>
+
+        <section vid="80">
+            <h2 class="text-xs font-bold text-[#1a2744] tracking-widest uppercase mb-4 flex items-center gap-1.5" vid="81">
+                <span class="text-[#ccccff] text-sm" vid="82">✦</span> Wishlist
+            </h2>
+            <div id="wish-container" class="space-y-3" vid="83"></div>
+            <button onclick="toggleModal('wish-modal', true)" class="w-full mt-4 py-3.5 rounded-2xl border border-dashed border-[#1a2744]/30 text-[10px] font-bold text-[#1a2744]/60 uppercase tracking-widest btn-active hover:bg-white/30 transition-colors flex items-center justify-center gap-2" vid="84">
+                <span vid="85">+</span> New Wish
+            </button>
+        </section>
+    </main>
+
+    <div class="fixed bottom-0 left-0 right-0 p-4 z-40 pb-8 pointer-events-none" vid="86">
+        <div class="rounded-[30px] p-4 shadow-[0_20px_40px_rgba(26,39,68,0.1)] pointer-events-auto bg-white/80 backdrop-blur-xl border border-white max-w-md mx-auto relative overflow-hidden" vid="87">
+            <div class="absolute inset-0 bg-gradient-to-t from-white/40 to-transparent pointer-events-none" vid="88"></div>
+            <div class="flex flex-wrap justify-between items-center gap-3 mb-3 px-1 relative z-10" vid="89">
+                <label class="inline-flex items-center cursor-pointer group" vid="90">
+                    <input type="checkbox" id="via-octo" class="sr-only peer" vid="91">
+                    <div class="w-9 h-5 bg-[#ccccff] rounded-full peer-checked:bg-[#00b8a9] transition-colors duration-300 border border-white shadow-inner relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-[14px] after:w-[14px] after:transition-all peer-checked:after:translate-x-[16px]" vid="92"></div>
+                    <span class="ml-2 text-[9px] font-bold text-[#1a2744] uppercase tracking-wide group-hover:opacity-80 transition-opacity" vid="93">Octopus</span>
+                </label>
+                <div class="flex gap-2" vid="94">
+                    <div class="relative" vid="95">
+                        <select id="in-cur" class="bg-white border border-white/80 rounded-lg pl-2 pr-6 py-1.5 text-[10px] font-bold text-[#1a2744] appearance-none shadow-sm outline-none focus:border-[#00b8a9]" vid="96">
+                            <option vid="97">HKD</option>
+                            <option vid="98">JPY</option>
+                            <option vid="99">CNY</option>
+                        </select>
+                        <div class="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[#1a2744]/50 text-[8px]" vid="100">▼</div>
+                    </div>
+                    <div class="relative" vid="101">
+                        <select id="in-cat" class="bg-white border border-white/80 rounded-lg pl-2 pr-6 py-1.5 text-[10px] font-bold text-[#1a2744] appearance-none shadow-sm outline-none focus:border-[#00b8a9]" vid="102">
+                            <option value="Meal" vid="103">Meal</option>
+                            <option value="Transport" vid="104">Transport</option>
+                            <option value="Shopping" vid="105">Shopping</option>
+                            <option value="Takarazuka" vid="106">Takarazuka</option>
+                            <option value="TopUp" vid="107">TopUp</option>
+                            <option value="Transfer" vid="108">Transfer</option>
+                            <option value="Income" vid="109">Income</option>
+                            <option value="Exclude" vid="110">Exclude</option>
+                        </select>
+                        <div class="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[#1a2744]/50 text-[8px]" vid="111">▼</div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-2 relative z-10" vid="112">
+                <input type="text" id="in-name" placeholder="Detail..." class="glass-input flex-[2_1_120px] rounded-xl px-4 text-sm h-12 font-medium bg-white/70" vid="113">
+                <input type="number" id="in-val" placeholder="0.00" class="glass-input flex-[1_1_70px] rounded-xl px-3 text-sm font-mono-custom h-12 text-right bg-white/70" vid="114">
+                <button onclick="commitTransaction()" class="bg-gradient-to-r from-[#ccccff] to-[#b3b3e6] text-[#1a2744] rounded-xl px-4 h-12 text-[10px] font-bold uppercase tracking-wider btn-active shadow-sm border border-white hover:opacity-90 transition-opacity" vid="115">
+                    Submit
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="checklist-modal" class="modal-overlay" vid="116">
+        <div class="modal-backdrop" onclick="toggleModal('checklist-modal', false)" vid="117"></div>
+        <div class="modal-content glass-card rounded-[32px] p-8 w-full max-w-sm relative z-10 shadow-2xl border border-white" vid="118">
+            <h3 class="text-xs font-bold text-[#1a2744] uppercase tracking-widest mb-6 text-center" vid="119">Expedition Generator</h3>
+            
+            <input type="text" id="tour-name" placeholder="Trip Name (e.g., Tokyo)" class="glass-input rounded-2xl px-4 py-3.5 text-sm mb-4 font-medium text-center" vid="120">
+            
+            <div class="flex flex-col gap-4 mb-6">
+                <div class="flex justify-between items-center px-2 text-[10px] font-bold uppercase tracking-wide text-[#1a2744]/80">
+                    <span>Expedition Count</span>
+                    <input type="number" id="tour-count" value="1" min="1" max="10" class="glass-input w-16 rounded-xl py-2 text-center font-mono-custom bg-white/80">
+                </div>
+                
+                <div class="flex justify-between items-center px-2 text-[10px] font-bold uppercase tracking-wide text-[#1a2744]/80">
+                    <span>Include Event?</span>
+                    <label class="inline-flex items-center cursor-pointer relative">
+                        <input type="checkbox" id="tour-has-event" class="sr-only peer" checked>
+                        <div class="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-[16px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-[#00b8a9]"></div>
+                    </label>
+                </div>
+            </div>
+
+            <button onclick="generateTour()" class="w-full py-4 rounded-2xl text-[10px] font-bold text-white bg-[#00b8a9] uppercase tracking-widest btn-active shadow-md hover:bg-[#009d8f] transition-colors" vid="124">
+                Generate Plan
+            </button>
+        </div>
+    </div>
+
+    <div id="wish-modal" class="modal-overlay" vid="125">
+        <div class="modal-backdrop" onclick="toggleModal('wish-modal', false)" vid="126"></div>
+        <div class="modal-content glass-card rounded-[32px] p-8 w-full max-w-sm relative z-10 shadow-2xl border border-white" vid="127">
+            <h3 class="text-xs font-bold text-[#1a2744] uppercase tracking-widest mb-6 text-center" vid="128">New Wish Target</h3>
+            <div class="space-y-4 mb-6" vid="129">
+                <input type="text" id="final-wish-name" placeholder="Item Name" class="glass-input rounded-2xl px-4 py-3.5 text-sm font-medium" vid="130">
+                <div class="relative" vid="131">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-[#1a2744]/40 font-mono-custom text-sm" vid="132">HKD</span>
+                    <input type="number" id="final-wish-target" placeholder="Amount" class="glass-input rounded-2xl pl-12 pr-4 py-3.5 text-sm font-mono-custom" vid="133">
+                </div>
+            </div>
+            <button onclick="addWishFinal()" class="w-full py-4 rounded-2xl text-[10px] font-bold text-white bg-[#ccccff] text-[#1a2744] uppercase tracking-widest btn-active shadow-md hover:bg-[#b3b3e6] transition-colors" vid="134">
+                Confirm
+            </button>
+        </div>
+    </div>
+
+    <div id="edit-modal" class="modal-overlay" vid="135">
+        <div class="modal-backdrop" onclick="toggleModal('edit-modal', false)" vid="136"></div>
+        <div class="modal-content glass-card rounded-[32px] p-8 w-full max-w-sm relative z-10 text-center shadow-2xl border border-white" vid="137">
+            <h3 id="modal-title" class="text-xs font-bold text-[#1a2744] uppercase tracking-widest mb-6" vid="138">Update Value</h3>
+            <input type="number" id="modal-input" class="glass-input rounded-2xl py-4 text-3xl font-mono-custom font-bold text-center mb-6 bg-white/80" vid="139">
+            <div class="flex gap-3" vid="140">
+                <button onclick="toggleModal('edit-modal', false)" class="flex-1 py-3.5 rounded-2xl text-[10px] font-bold text-[#1a2744] bg-white border border-[#1a2744]/10 uppercase tracking-widest btn-active hover:bg-gray-50 transition-colors" vid="141">
+                    Cancel
+                </button>
+                <button onclick="saveEditModal()" class="flex-1 py-3.5 rounded-2xl text-[10px] font-bold text-white bg-[#1a2744] uppercase tracking-widest btn-active shadow-md hover:bg-[#11192d] transition-colors" vid="142">
+                    Save
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script vid="143">
+        const STORAGE_KEY = 'ume_matrix_v11_local_demo';
+        let FX = { HKD: 1.0, JPY: 0.052, CNY: 1.10 };
+        let currentFilter = 'All';
+        let activeEditKey = null;
+
+        let defaultDb = {
+            baseBudget: 32000,
+            targetSaving: 10000,
+            octopusBal: 425.50,
+            records: [
+                { name: 'Sushi Express', valHKD: 180.0, category: 'Meal', viaOcto: true, fullDate: `${new Date().getMonth()+1}.${new Date().getDate()}` },
+                { name: 'MTR Central', valHKD: 12.5, category: 'Transport', viaOcto: true, fullDate: `${new Date().getMonth()+1}.${new Date().getDate()}` },
+                { name: 'Uniqlo Basics', valHKD: 450.0, category: 'Shopping', viaOcto: false, fullDate: `${new Date().getMonth()+1}.${new Date().getDate()}` },
+                { name: 'Monthly Salary', valHKD: 32000.0, category: 'Income', viaOcto: false, fullDate: '10.01' }
+            ],
+            dueDates: [
+                { id: 1, type: 'Flight', name: 'ANA Tokyo', amount: 4500, date: '11.15', memo: 'HND' },
+                { id: 2, type: 'Event', name: 'Concert Tix', amount: 1200, date: '11.20', memo: 'VIP' }
+            ],
+            checklist: [
+                { name: '✦ Tokyo Autumn | Flight', done: true },
+                { name: '✦ Tokyo Autumn | Hotel 1', done: true },
+                { name: '✦ Tokyo Autumn | Hotel 2', done: false },
+                { name: '✦ Tokyo Autumn | JR Pass', done: false }
+            ],
+            wishlist: [
+                { name: 'Sony A7IV Lens', target: 8000, saved: 0 },
+                { name: 'New iPad Mini', target: 4500, saved: 0 }
+            ]
+        };
+
+        let db = { ...defaultDb };
+
+        function initApp() {
+            const localData = localStorage.getItem(STORAGE_KEY);
+            if (localData) {
+                try {
+                    db = JSON.parse(localData);
+                } catch (e) {
+                    console.error("Error parsing local data, using defaults.");
+                }
+            }
+            refresh();
+            updateFX(); 
+        }
+
+        function saveLocally() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
             refresh();
             const status = document.getElementById('sync-status');
             status.style.opacity = '1';
-            try {
-                await fetch(`https://api.jsonbin.io/v3/b/${CLOUD_CONF.binId}`, {
-                    method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Master-Key': CLOUD_CONF.masterKey }, body: JSON.stringify(db)
-                });
-                setTimeout(() => { status.style.opacity = '0'; }, 2000);
-            } catch (e) { status.innerText = "Sync Error"; status.style.color = "red"; }
+            setTimeout(() => { status.style.opacity = '0'; }, 2000);
         }
 
         function toggleModal(id, show) {
-            const el = document.getElementById(id);
-            if (show) el.classList.add('active'); else el.classList.remove('active');
-        }
-
-        async function updateFX() {
-            try {
-                const res = await fetch('https://open.er-api.com/v6/latest/HKD');
-                const data = await res.json();
-                if(data.rates) {
-                    FX.JPY = 1 / data.rates.JPY; FX.CNY = 1 / data.rates.CNY;
-                    document.getElementById('fx-display').innerText = `JPY ${FX.JPY.toFixed(4)} • CNY ${FX.CNY.toFixed(2)}`;
-                    refresh();
-                }
-            } catch(e) { document.getElementById('fx-display').innerText = "Offline FX"; }
+            const modal = document.getElementById(id);
+            if (show) {
+                modal.classList.add('active');
+            } else {
+                modal.classList.remove('active');
+            }
         }
 
         function getCycleDays() {
             const now = new Date();
-            const year = now.getFullYear(), month = now.getMonth();
-            const lastDayThisMonth = new Date(year, month + 1, 0);
-            const daysLeft = Math.ceil((lastDayThisMonth - now) / 86400000);
-            // 逻辑更新：如果是本月最后一天（daysLeft=0或很小），视为新周期的起始日（下个月的总天数）
-            if (daysLeft <= 0) return new Date(year, month + 2, 0).getDate();
-            return daysLeft;
+            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+            const today = now.getDate();
+            if (today === lastDay) {
+                return new Date(now.getFullYear(), now.getMonth() + 2, 0).getDate();
+            }
+            return (lastDay - today) + 1;
         }
 
         function calculateStats() {
-            let pool = db.baseBudget, octo = db.octopusBal;
+            let pool = db.baseBudget;
+            let octo = db.octopusBal;
+            let dailySpentToday = 0;
+            const nowStr = `${new Date().getMonth()+1}.${new Date().getDate()}`;
+
             db.records.forEach(r => {
                 if(r.category === 'Exclude') return;
-                if(r.category === 'Income') pool += r.valHKD;
-                else if(r.category === 'TopUp') { pool -= r.valHKD; octo += r.valHKD; }
-                else if(r.category === 'Transfer') { pool -= r.valHKD; }
-                else { if(r.viaOcto) octo -= r.valHKD; else pool -= r.valHKD; }
+                if(r.category === 'Income') {
+                    pool += r.valHKD;
+                } else if(r.category === 'TopUp') {
+                    pool -= r.valHKD; 
+                    octo += r.valHKD;
+                } else {
+                    if(r.viaOcto) octo -= r.valHKD; 
+                    else pool -= r.valHKD;
+                    if(['Meal', 'Transport', 'Shopping'].includes(r.category) && r.fullDate === nowStr) {
+                        dailySpentToday += r.valHKD;
+                    }
+                }
             });
-            const daysLeft = getCycleDays();
-            // 只有 Pool 里的钱（扣除目标储蓄后）平摊给剩余日子
-            const rec = Math.max(0, (pool - db.targetSaving) / daysLeft);
-            return { pool, octo, rec, daysLeft };
-        }
 
-        function commitTransaction() {
-            const val = parseFloat(document.getElementById('in-val').value);
-            if(isNaN(val) || val <= 0) return;
-            const cur = document.getElementById('in-cur').value, cat = document.getElementById('in-cat').value;
-            db.records.unshift({ 
-                name: document.getElementById('in-name').value || cat, 
-                valHKD: val * FX[cur], category: cat, 
-                viaOcto: document.getElementById('via-octo').checked, 
-                fullDate: `${new Date().getMonth()+1}.${new Date().getDate()}` 
-            });
-            document.getElementById('in-val').value = ''; document.getElementById('in-name').value = '';
-            save();
+            const daysLeft = getCycleDays();
+            const rec = Math.max(0, (pool - db.targetSaving) / daysLeft);
+            return { pool, octo, rec, daysLeft, dailySpentToday };
         }
 
         function refresh() {
             const s = calculateStats();
-            document.getElementById('stat-assets').innerText = s.pool.toLocaleString(undefined, {minimumFractionDigits:2});
-            document.getElementById('stat-octo').innerText = s.octo.toLocaleString(undefined, {minimumFractionDigits:2});
+            document.getElementById('stat-assets').innerText = s.pool.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('stat-octo').innerText = s.octo.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
             document.getElementById('stat-save').innerText = db.targetSaving.toLocaleString();
-            document.getElementById('stat-daily').innerText = s.rec.toFixed(0);
+            document.getElementById('stat-daily').innerText = Math.floor(s.rec);
             document.getElementById('stat-days').innerText = `${s.daysLeft}D`;
 
-            // --- 盈余分配逻辑 ---
             const now = new Date();
-            const today = now.getDate();
+            const todayIdx = now.getDate();
             const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-            // 理论每日配额 = (初始总资产 - 目标储蓄) / 本月总天数
-            // 间接影响逻辑：由于 Takarazuka/Transfer 减少了 pool，s.rec 已经变小了。
-            // 这里我们计算本月累计的“流量消费”盈余
-            const dailyQuota = (db.baseBudget - db.targetSaving) / daysInMonth;
-            const theoreticalLimit = dailyQuota * today;
-            const actualDirectSpend = db.records.reduce((sum, r) => {
-                // 只有这三类直接消耗每日限额
-                const isDirect = ['Meal', 'Transport', 'Shopping'].includes(r.category);
-                return isDirect ? sum + r.valHKD : sum;
+            const theoreticalTotalLimit = ((db.baseBudget - db.targetSaving) / daysInMonth) * todayIdx;
+            const totalDailyTypeSpent = db.records.reduce((sum, r) => {
+                return (['Meal', 'Transport', 'Shopping'].includes(r.category)) ? sum + r.valHKD : sum;
             }, 0);
-            let surplus = Math.max(0, theoreticalLimit - actualDirectSpend);
-            db.wishlist.forEach(w => { const fill = Math.min(w.target, surplus); w.saved = fill; surplus -= fill; });
 
-            // 渲染 Ticker
+            let surplus = Math.max(0, theoreticalTotalLimit - totalDailyTypeSpent);
+            db.wishlist.forEach(w => {
+                const fill = Math.min(w.target, surplus);
+                w.saved = fill;
+                surplus -= fill;
+            });
+
             let tickerParts = [];
             db.checklist.filter(c => !c.done).forEach(c => tickerParts.push(`TASK: ${c.name}`));
-            db.dueDates.forEach(d => tickerParts.push(`DUE: ${d.name} (${d.amount})`));
-            document.getElementById('main-ticker').innerHTML = (tickerParts.length ? tickerParts.map(p => `<span class="mx-10">${p}</span>`).join('') : `<span class="mx-10 opacity-40">ALL CLEAR</span>`).repeat(5);
+            db.dueDates.forEach(d => tickerParts.push(`DUE: ${d.name} ($${d.amount})`));
+            const tickerHtml = tickerParts.length > 0 
+                ? tickerParts.map(p => `<span class="mx-8">${p}</span>`).join('') 
+                : `<span class="mx-8 opacity-40">ALL CLEAR • NO PENDING TASKS</span>`;
+            document.getElementById('main-ticker').innerHTML = tickerHtml.repeat(6); 
 
-            // 渲染 Filters
             const cats = ['All', 'Meal', 'Transport', 'Shopping', 'Takarazuka', 'TopUp', 'Transfer', 'Income', 'Exclude'];
-            document.getElementById('audit-filters').innerHTML = cats.map(c => `<button onclick="setFilter('${c}')" class="px-4 py-1.5 rounded-full border border-white text-[9px] font-bold uppercase transition-all ${currentFilter === c ? 'bg-[#474a4d] text-white' : 'bg-white/40 text-[#474a4d]'}">${c}</button>`).join('');
+            document.getElementById('audit-filters').innerHTML = cats.map(c => `
+                <button onclick="setFilter('${c}')" class="px-4 py-1.5 rounded-full border border-white text-[9px] font-bold uppercase transition-all duration-200 snap-start whitespace-nowrap ${currentFilter === c ? 'bg-[#1a2744] text-white shadow-md' : 'bg-white/40 text-[#1a2744] hover:bg-white/60'}">
+                    ${c}
+                </button>
+            `).join('');
             
-            // 渲染 Log
             const filtered = db.records.filter(r => currentFilter === 'All' || r.category === currentFilter);
-            document.getElementById('log-list').innerHTML = filtered.slice(0, 15).map(r => `
-                <div class="flex justify-between items-center p-4 border-b border-white/40 last:border-0 ${r.category==='Exclude'?'opacity-50 italic':''}">
-                    <div class="text-xs font-bold text-[#474a4d]">${r.name}<div class="text-[9px] text-[#474a4d]/50 uppercase">${r.fullDate} ${r.viaOcto?'[OCT]':''}</div></div>
-                    <div class="font-mono font-bold text-sm">${r.valHKD.toFixed(1)}</div>
-                </div>`).join('');
-            
-            // 渲染 Checklist (四角星代替打勾)
+            let netTotal = 0;
+            const listHtml = filtered.slice(0, 15).map(r => {
+                if(r.category !== 'Exclude') {
+                    netTotal += (r.category === 'Income' || (r.category === 'TopUp' && !r.viaOcto)) ? r.valHKD : -r.valHKD;
+                }
+                const isIncome = r.category === 'Income';
+                const isExclude = r.category === 'Exclude';
+                const amtColor = isIncome ? 'text-[#00b8a9]' : 'text-[#1a2744]';
+                const sign = isIncome ? '+' : '-';
+                return `
+                <div class="flex justify-between items-center p-4 border-b border-white/40 last:border-0 ${isExclude ? 'opacity-40 italic' : ''} hover:bg-white/20 transition-colors">
+                    <div class="flex flex-col gap-0.5">
+                        <span class="text-xs font-bold text-[#1a2744]">${r.name}</span>
+                        <div class="flex items-center gap-1.5 text-[9px] text-[#1a2744]/50 uppercase font-medium">
+                            <span>${r.fullDate}</span>
+                            ${r.viaOcto ? '<span class="bg-[#ccccff]/50 px-1 rounded text-[#1a2744]">OCT</span>' : ''}
+                            <span>• ${r.category}</span>
+                        </div>
+                    </div>
+                    <div class="font-mono-custom font-bold text-sm tracking-tight ${amtColor}">
+                        ${sign}${r.valHKD.toFixed(1)}
+                    </div>
+                </div>`;
+            }).join('');
+            document.getElementById('log-list').innerHTML = listHtml || `<div class="p-6 text-center text-xs text-[#1a2744]/40 font-bold uppercase">No records found</div>`;
+            document.getElementById('audit-summary').innerText = `NET: ${netTotal > 0 ? '+' : ''}${netTotal.toFixed(0)}`;
+
             document.getElementById('checklist-container').innerHTML = db.checklist.map((c, i) => `
-                <div class="glass-card rounded-2xl p-3 flex justify-between items-center ${c.done?'opacity-40':''}">
-                    <span class="text-xs font-semibold ${c.done?'line-through':''}">✦ ${c.name}</span>
-                    <div class="flex items-center gap-2">
-                        <button onclick="toggleCheck(${i})" class="w-6 h-6 flex items-center justify-center rounded-lg border border-white/60 text-xs">${c.done ? '✦' : ''}</button>
-                        <button onclick="removeCheck(${i})" class="text-[14px] text-[#474a4d]/30 px-1">×</button>
+                <div class="glass-card rounded-[20px] p-3.5 flex justify-between items-center transition-all duration-300 ${c.done ? 'opacity-40 bg-white/20' : 'bg-white/60'} group">
+                    <span class="text-xs font-semibold ${c.done ? 'line-through text-[#1a2744]/60' : 'text-[#1a2744]'}">${c.name}</span>
+                    <div class="flex items-center gap-3">
+                        <div class="relative flex items-center justify-center">
+                            <input type="checkbox" ${c.done ? 'checked' : ''} onchange="toggleCheck(${i})" class="w-5 h-5 appearance-none border-2 border-[#1a2744]/20 rounded-md checked:bg-[#00b8a9] checked:border-[#00b8a9] transition-colors cursor-pointer relative z-10">
+                            ${c.done ? '<svg class="w-3 h-3 absolute text-white pointer-events-none z-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>' : ''}
+                        </div>
+                        <button onclick="removeCheck(${i})" class="text-[16px] text-[#1a2744]/20 hover:text-red-400 transition-colors px-1 leading-none">×</button>
                     </div>
-                </div>`).join('');
+                </div>
+            `).join('') || `<div class="text-center text-[10px] text-[#1a2744]/40 py-2 uppercase font-bold">Checklist empty</div>`;
 
-            // 渲染 Due List
             document.getElementById('due-list').innerHTML = db.dueDates.map(d => `
-                <div class="glass-card rounded-2xl p-4 flex justify-between items-center">
-                    <div class="text-xs font-bold text-[#474a4d]">✦ ${d.name}<div class="text-[9px] opacity-50">${d.date} • ${d.type}</div></div>
-                    <button onclick="executeDue(${d.id})" class="bg-[#474a4d] text-white text-[9px] font-bold px-3 py-2 rounded-lg uppercase btn-active">Pay</button>
-                </div>`).join('');
-
-            // 渲染 Wishlist
-            document.getElementById('wish-container').innerHTML = db.wishlist.map((w, i) => {
-                const perc = Math.min(100, (w.saved/w.target)*100);
-                return `<div class="glass-card rounded-2xl p-4 relative overflow-hidden">
-                    <div class="flex justify-between mb-2 text-[10px] font-bold uppercase z-10 relative">
-                        <span class="flex items-center gap-1">${perc >= 100 ? '✦' : '✧'} ${w.name}</span>
-                        <span>${perc.toFixed(1)}%</span>
+                <div class="glass-card rounded-[20px] p-4 flex justify-between items-center bg-white/60 hover:bg-white/80 transition-colors">
+                    <div class="flex flex-col gap-1">
+                        <span class="text-xs font-bold text-[#1a2744]">${d.name} <span class="text-[10px] text-[#1a2744]/50 font-normal ml-1">(${d.type})</span></span>
+                        <div class="flex gap-2 text-[10px] text-[#1a2744]/60 font-mono-custom">
+                            <span class="bg-white/80 px-1.5 rounded-md text-[#1a2744] font-bold">$${d.amount}</span>
+                            <span>Due: ${d.date}</span>
+                        </div>
+                        ${d.memo ? `<span class="text-[9px] text-[#1a2744]/40 italic mt-0.5">${d.memo}</span>` : ''}
                     </div>
-                    <div class="w-full h-1.5 bg-white/60 rounded-full overflow-hidden z-10 relative"><div class="h-full bg-[#a8c97f] transition-all duration-700" style="width:${perc}%"></div></div>
-                    <div class="flex justify-between mt-2 text-[8px] font-mono opacity-50"><span>SAVED: ${Math.floor(w.saved)}</span><span>TARGET: ${w.target}</span></div>
-                    <button onclick="removeWish(${i})" class="absolute top-1 right-2 text-[14px] text-[#474a4d]/20">×</button>
+                    <button onclick="executeDue(${d.id})" class="bg-gradient-to-r from-[#1a2744] to-[#25375f] text-white text-[9px] font-bold px-4 py-2.5 rounded-xl uppercase tracking-wider btn-active shadow-sm">
+                        Pay
+                    </button>
+                </div>
+            `).join('') || `<div class="text-center text-[10px] text-[#1a2744]/40 py-2 uppercase font-bold">No due items</div>`;
+
+            document.getElementById('wish-container').innerHTML = db.wishlist.map((w, i) => {
+                const perc = Math.min(100, (w.saved / w.target) * 100);
+                return `
+                <div class="glass-card rounded-[24px] p-4 relative overflow-hidden bg-white/50 group">
+                    <div class="flex justify-between mb-2.5 text-[10px] font-bold uppercase tracking-wide z-10 relative">
+                        <span class="text-[#1a2744] flex items-center gap-1.5">
+                            <span class="text-[#ccccff] text-[12px]">✦</span> ${w.name}
+                        </span>
+                        <span class="font-mono-custom text-[#00b8a9]">${perc.toFixed(1)}%</span>
+                    </div>
+                    <div class="w-full h-2 bg-[#1a2744]/5 rounded-full overflow-hidden z-10 relative shadow-inner">
+                        <div class="h-full bg-gradient-to-r from-[#00b8a9] to-[#00d6c4] rounded-full transition-all duration-1000 ease-out" style="width:${perc}%"></div>
+                    </div>
+                    <div class="mt-2 flex justify-between text-[8px] font-mono-custom text-[#1a2744]/40 z-10 relative">
+                        <span>$${Math.floor(w.saved)}</span>
+                        <span>$${w.target}</span>
+                    </div>
+                    <button onclick="removeWish(${i})" class="absolute top-2 right-3 text-[16px] text-[#1a2744]/10 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all z-20 leading-none">×</button>
                 </div>`;
             }).join('');
         }
 
-        window.toggleCheck = (i) => { db.checklist[i].done = !db.checklist[i].done; save(); };
-        window.removeCheck = (i) => { if(confirm('Delete?')) { db.checklist.splice(i, 1); save(); } };
-        window.removeWish = (i) => { if(confirm('Remove?')) { db.wishlist.splice(i, 1); save(); } };
-        function setFilter(f) { currentFilter = f; refresh(); }
-        function openEditModal(k, t) { activeEditKey = k; document.getElementById('modal-title').innerText = t; document.getElementById('modal-input').value = db[k]; toggleModal('edit-modal', true); }
-        function saveEditModal() { db[activeEditKey] = parseFloat(document.getElementById('modal-input').value) || 0; toggleModal('edit-modal', false); save(); }
+        function commitTransaction() {
+            const valInput = document.getElementById('in-val').value;
+            const val = parseFloat(valInput);
+            if(isNaN(val) || val <= 0) return;
+            const cur = document.getElementById('in-cur').value;
+            const cat = document.getElementById('in-cat').value;
+            const nameInput = document.getElementById('in-name').value;
+            const finalVal = val * (FX[cur] || 1);
+            db.records.unshift({ 
+                name: nameInput || cat, 
+                valHKD: finalVal, 
+                category: cat, 
+                viaOcto: document.getElementById('via-octo').checked, 
+                fullDate: `${new Date().getMonth()+1}.${new Date().getDate()}` 
+            });
+            document.getElementById('in-val').value = ''; 
+            document.getElementById('in-name').value = ''; 
+            saveLocally();
+        }
+
+        function addDue() {
+            const n = document.getElementById('due-name').value.trim();
+            const a = document.getElementById('due-amt').value;
+            if(!n || !a) {
+                alert("Please provide a name and amount.");
+                return;
+            }
+            db.dueDates.push({ 
+                id: Date.now(), 
+                type: document.getElementById('due-type').value, 
+                name: n, 
+                amount: parseFloat(a), 
+                date: document.getElementById('due-date').value || 'TBD', 
+                memo: document.getElementById('due-memo').value 
+            });
+            document.getElementById('due-name').value = ''; 
+            document.getElementById('due-amt').value = ''; 
+            document.getElementById('due-memo').value = '';
+            document.getElementById('due-date').value = '';
+            saveLocally();
+        }
+
+        function executeDue(id) {
+            const idx = db.dueDates.findIndex(d => d.id === id);
+            if(idx > -1) {
+                const item = db.dueDates[idx];
+                if(confirm(`Execute payment for ${item.name} ($${item.amount})?`)) {
+                    db.records.unshift({ 
+                        name: `✦ [${item.type}] ${item.name}`, 
+                        valHKD: item.amount, 
+                        category: 'Takarazuka', 
+                        viaOcto: false, 
+                        fullDate: `${new Date().getMonth()+1}.${new Date().getDate()}` 
+                    });
+                    db.dueDates.splice(idx, 1); 
+                    saveLocally();
+                }
+            }
+        }
+
         function generateTour() {
-            const name = document.getElementById('tour-name').value.trim(), count = parseInt(document.getElementById('tour-count').value), hasEvent = document.getElementById('tour-event').checked;
-            if(!name) return;
-            db.checklist.push
+            const name = document.getElementById('tour-name').value.trim();
+            const count = parseInt(document.getElementById('tour-count').value) || 1;
+            const hasEvent = document.getElementById('tour-has-event').checked;
+            
+            if(!name) {
+                alert("Please enter a trip name.");
+                return;
+            }
+            
+            // 1. 固定生成 Ticket
+            db.checklist.push({ name: `✦ ${name} | Ticket`, done: false });
+            
+            // 2. 根据勾选生成 Event
+            if(hasEvent) {
+                db.checklist.push({ name: `✦ ${name} | Event`, done: false });
+            }
+            
+            // 3. 根据次数循环生成 Flight 和 Hotel
+            for(let i = 1; i <= count; i++) {
+                const suffix = count > 1 ? ` #${i}` : '';
+                db.checklist.push({ name: `✦ ${name} | Flight${suffix}`, done: false });
+                db.checklist.push({ name: `✦ ${name} | Hotel${suffix}`, done: false });
+            }
+            
+            document.getElementById('tour-name').value = '';
+            document.getElementById('tour-count').value = '1';
+            toggleModal('checklist-modal', false); 
+            saveLocally();
+        }
+
+        function addWishFinal() {
+            const n = document.getElementById('final-wish-name').value.trim();
+            const t = parseFloat(document.getElementById('final-wish-target').value);
+            if(n && !isNaN(t) && t > 0) { 
+                db.wishlist.push({ name: n, target: t, saved: 0 }); 
+                document.getElementById('final-wish-name').value = '';
+                document.getElementById('final-wish-target').value = '';
+                toggleModal('wish-modal', false); 
+                saveLocally(); 
+            }
+        }
+
+        function openEditModal(key, title) { 
+            activeEditKey = key; 
+            document.getElementById('modal-title').innerText = `Update ${title}`; 
+            document.getElementById('modal-input').value = db[key]; 
+            toggleModal('edit-modal', true); 
+            setTimeout(() => document.getElementById('modal-input').focus(), 100);
+        }
+
+        function saveEditModal() { 
+            const val = parseFloat(document.getElementById('modal-input').value);
+            if(!isNaN(val)) {
+                db[activeEditKey] = val; 
+            }
+            toggleModal('edit-modal', false); 
+            saveLocally(); 
+        }
+
+        window.toggleCheck = (i) => { 
+            db.checklist[i].done = !db.checklist[i].done; 
+            saveLocally(); 
+        };
+        
+        window.removeCheck = (i) => { 
+            if(confirm('Delete this checklist item?')) { 
+                db.checklist.splice(i, 1); 
+                saveLocally(); 
+            } 
+        };
+        
+        window.removeWish = (i) => { 
+            if(confirm('Remove this wish?')) { 
+                db.wishlist.splice(i, 1); 
+                saveLocally(); 
+            } 
+        };
+        
+        window.setFilter = (f) => { 
+            currentFilter = f; 
+            refresh(); 
+        };
+
+        async function updateFX() { 
+            const displayBtn = document.getElementById('fx-display');
+            displayBtn.classList.add('animate-pulse');
+            try { 
+                const res = await fetch('https://open.er-api.com/v6/latest/HKD'); 
+                const data = await res.json(); 
+                if(data.rates) { 
+                    FX.JPY = 1 / data.rates.JPY; 
+                    FX.CNY = 1 / data.rates.CNY; 
+                    displayBtn.innerText = `JPY ${FX.JPY.toFixed(4)} • CNY ${FX.CNY.toFixed(2)}`; 
+                    refresh(); 
+                } 
+            } catch(e) { 
+                displayBtn.innerText = "FX Offline (Defaults)"; 
+            } finally {
+                displayBtn.classList.remove('animate-pulse');
+            }
+        }
+
+        window.onload = initApp;
+    </script>
+</body></html>
