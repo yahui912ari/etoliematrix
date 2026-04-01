@@ -433,8 +433,13 @@
             });
 
             const daysLeft = getCycleDays();
-            const rec = Math.max(0, (pool - db.targetSaving) / daysLeft);
-            return { pool, octo, rec, daysLeft, dailySpentToday };
+            // 修改后的计算公式：日推荐预算 = (总额 - 目标) / 剩余天数 * 0.8
+            const rec = Math.max(0, ((pool - db.targetSaving) / daysLeft) * 0.8);
+            
+            // 为了后续心愿单逻辑，这里需要导出计算出来的基准日推荐值
+            const baseDailyRec = rec; 
+            
+            return { pool, octo, rec, daysLeft, dailySpentToday, baseDailyRec };
         }
 
         function refresh() {
@@ -447,18 +452,37 @@
 
             const now = new Date();
             const todayIdx = now.getDate();
-            const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-            const theoreticalTotalLimit = ((db.baseBudget - db.targetSaving) / daysInMonth) * todayIdx;
-            const totalDailyTypeSpent = db.records.reduce((sum, r) => {
-                return (['Meal', 'Transport', 'Shopping'].includes(r.category)) ? sum + r.valHKD : sum;
-            }, 0);
+            
+            // --- 心愿单逻辑重构部分 ---
+            // 按照天进行结余计算：结余池 = sum(每日推荐额度 - 每日实际日常三类开销)
+            // 逻辑：遍历历史记录，找出每日的日常花销，计算出到今天为止的每日结余总额
+            
+            let totalSurplusPool = 0;
+            const dailyRecValue = s.baseDailyRec; // 当前推荐的日均额度
+            
+            // 简单的结余算法：针对本月至今，每天分配额度，减去对应的记录
+            for(let d = 1; d <= todayIdx; d++) {
+                const dateKey = `${now.getMonth()+1}.${d}`;
+                const dailySpent = db.records.reduce((sum, r) => {
+                    const isTodayRecord = r.fullDate === dateKey;
+                    const isDailyType = ['Meal', 'Transport', 'Shopping'].includes(r.category);
+                    return (isTodayRecord && isDailyType) ? sum + r.valHKD : sum;
+                }, 0);
+                
+                // 每日结余 = 推荐预算 - 实际花销
+                const daySurplus = dailyRecValue - dailySpent;
+                totalSurplusPool += daySurplus;
+            }
+            
+            // 确保结余池不为负数
+            let surplus = Math.max(0, totalSurplusPool);
 
-            let surplus = Math.max(0, theoreticalTotalLimit - totalDailyTypeSpent);
             db.wishlist.forEach(w => {
                 const fill = Math.min(w.target, surplus);
                 w.saved = fill;
                 surplus -= fill;
             });
+            // --- 重构结束 ---
 
             let tickerParts = [];
             db.checklist.filter(c => !c.done).forEach(c => tickerParts.push(`TASK: ${c.name}`));
